@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sax-Würfel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#e6edf1; --panel:#f6f9fa; --ink:#12263a; --muted:#5b6c7b; --brass:#a9741a; --brass-ink:#fff; --line:#c5d2da;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c2a; --panel:#172a3d; --ink:#eaf0f4; --muted:#93a6b6; --brass:#e0a640; --brass-ink:#1b1305; --line:#2a4157;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c2a; --panel:#172a3d; --ink:#eaf0f4; --muted:#93a6b6; --brass:#e0a640; --brass-ink:#1b1305; --line:#2a4157;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:520px;padding:20px 18px 24px;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;align-items:center;justify-content:space-between}
+h1{font-size:1.1rem;font-weight:700;margin:0;color:var(--muted)}
+.help-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--brass);background:none;color:var(--brass);font:inherit;font-size:1.1rem;font-weight:800;cursor:pointer}
+.help-btn[aria-expanded="true"]{background:var(--brass);color:var(--brass-ink)}
+.help{background:var(--panel);border:1px solid var(--brass);border-radius:14px;padding:14px 16px;line-height:1.7;font-size:1.05rem}
+.help svg{display:inline-block;vertical-align:middle;width:44px;height:16px;color:var(--ink)}
+.seg{display:flex;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1 1 auto;border:0;background:none;color:var(--muted);font:inherit;font-weight:500;font-size:.95rem;padding:10px 8px;border-radius:9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;min-height:130px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.card .label{color:var(--muted);font-size:.95rem}
+.key{font-size:clamp(2.6rem,14vw,4.2rem);font-weight:800;line-height:1.05;letter-spacing:-.02em;overflow-wrap:anywhere}
+.key.long{font-size:clamp(2rem,10.5vw,3.1rem)}
+.sub{color:var(--brass);font-weight:700;font-size:1.2rem;min-height:1.4em}
+.notes{min-height:100px}
+.notes svg{display:block;width:100%;height:auto;color:var(--ink)}
+.roll{margin-top:auto;border:0;background:var(--brass);color:var(--brass-ink);font:inherit;font-size:1.4rem;font-weight:800;padding:20px;border-radius:18px;cursor:pointer;width:100%}
+.roll:active{transform:scale(.98)}
+button:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.shuffling .key,.shuffling .notes{opacity:.55}
+@media (prefers-reduced-motion: reduce){.roll:active{transform:none}}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Meine App">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>Sax-Würfel</h1>
+    <button type="button" class="help-btn" id="helpBtn" aria-expanded="false" aria-controls="help" aria-label="Hilfe zu Dreiklänge" hidden>?</button>
+  </div>
+  <div class="help" id="help" hidden>
+    Dreiklänge mit 2 Altissimo, 4 Runden, Artikulation
+    <svg viewBox="0 0 44 16" aria-label="gebunden"><path d="M3,4 Q22,18 41,4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>,
+    <svg viewBox="0 0 44 16" aria-label="gestoßen"><circle cx="8" cy="8" r="3" fill="currentColor"/><circle cx="22" cy="8" r="3" fill="currentColor"/><circle cx="36" cy="8" r="3" fill="currentColor"/></svg>,
+    <svg viewBox="0 0 44 16" aria-label="gebunden"><path d="M3,4 Q22,18 41,4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>,
+    <svg viewBox="0 0 44 16" aria-label="gestoßen"><circle cx="8" cy="8" r="3" fill="currentColor"/><circle cx="22" cy="8" r="3" fill="currentColor"/><circle cx="36" cy="8" r="3" fill="currentColor"/></svg>
+  </div>
+  <div class="seg" id="segMode" role="group" aria-label="Modus"></div>
+  <div class="seg" id="segKey" role="group" aria-label="Auswahl"></div>
+  <section class="card" aria-live="polite">
+    <span class="label" id="keyLabel">Tonart</span>
+    <span class="key" id="key">–</span>
+    <span class="sub" id="sub"></span>
+  </section>
+  <section class="card" id="cardArt" aria-live="polite">
+    <span class="label">Artikulation</span>
+    <div class="notes" id="notes"></div>
+  </section>
+  <div class="seg" id="segIv" role="group" aria-label="Intervall"></div>
+  <button type="button" class="roll" id="roll">Würfeln</button>
+</main>
+<script>
+var DN=["C","Des","D","Es","E","F","Fis","G","As","A","B","H"];
+var MN=["c","cis","d","es","e","f","fis","g","gis","a","b","h"];
+var ART=[
+ [["s",3],["t",1]],
+ [["s",2],["s",2]],
+ [["s",2],["t",2]],
+ [["t",2],["s",2]],
+ [["s",3],["t",5]],
+ [["s",2],["t",4],["s",2]],
+ [["s",3],["t",2],["s",3]],
+ [["s",4]],
+ [["t",1],["s",2],["t",1]],
+ [["t",1],["s",3]]
+];
+var IV={sek:"in Sekunden",terz:"in Terzen",quart:"in Quarten"};
+var OPTS={
+ mode:[["scales","Tonleitern"],["triads","Dreiklänge"]],
+ sc:[["both","Dur + Moll"],["dur","Nur Dur"],["moll","Nur Moll"]],
+ tr:[["all","Alle"],["dur","Dur"],["moll","Moll"],["dim","Vermindert"],["aug","Übermäßig"]],
+ iv:[["all","Alle zusammen"],["sek","Sekunden"],["terz","Terzen"],["quart","Quarten"]]
+};
+var S={mode:"scales",sc:"both",tr:"all",iv:"all"};
+var last="",busy=false;
+var $=function(id){return document.getElementById(id)};
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+
+function seg(id,key,cb){
+  var el=$(id);el.innerHTML="";
+  OPTS[key].forEach(function(o){
+    var b=document.createElement("button");
+    b.type="button";b.textContent=o[1];
+    b.setAttribute("aria-pressed",S[key]===o[0]?"true":"false");
+    b.onclick=function(){S[key]=o[0];seg(id,key,cb);if(cb)cb()};
+    el.appendChild(b);
+  });
+}
+function artName(a){return a.map(function(g){return g[1]+" "+(g[0]==="s"?"gebunden":"angestoßen")}).join(", ")}
+function notation(a){
+  var total=0,slurs=[],i;
+  a.forEach(function(g){if(g[0]==="s")slurs.push([total,total+g[1]-1]);total+=g[1]});
+  var step=34,W=total*step+36,H=108,y=62;
+  var x=function(n){return 24+n*step};
+  var o='<svg viewBox="0 0 '+W+' '+H+'" style="max-width:'+Math.round(W*1.25)+'px" role="img" aria-label="'+artName(a)+'">';
+  o+='<line x1="6" x2="'+(W-6)+'" y1="'+y+'" y2="'+y+'" stroke="currentColor" stroke-width="1.5" opacity=".4"/>';
+  for(i=0;i<total;i++){
+    o+='<line x1="'+(x(i)+6.5)+'" x2="'+(x(i)+6.5)+'" y1="'+y+'" y2="20" stroke="currentColor" stroke-width="2"/>';
+    o+='<ellipse cx="'+x(i)+'" cy="'+y+'" rx="7.5" ry="5.5" transform="rotate(-20 '+x(i)+' '+y+')" fill="currentColor"/>';
+  }
+  for(i=0;i<total;i+=4){
+    var e=Math.min(i+3,total-1),w=x(e)-x(i)+2;
+    o+='<rect x="'+(x(i)+5.5)+'" y="19" width="'+w+'" height="5" fill="currentColor"/>';
+    o+='<rect x="'+(x(i)+5.5)+'" y="28" width="'+w+'" height="5" fill="currentColor"/>';
+  }
+  slurs.forEach(function(s){
+    var x1=x(s[0]),x2=x(s[1]);
+    o+='<path d="M'+x1+',77 Q'+((x1+x2)/2)+',100 '+x2+',77" fill="none" stroke="var(--brass)" stroke-width="3" stroke-linecap="round"/>';
+  });
+  return o+'</svg>';
+}
+function keyPool(){
+  var p=[];
+  function add(list,suffix){list.forEach(function(n){p.push(n+suffix)})}
+  if(S.mode==="scales"){
+    if(S.sc!=="moll")add(DN,"-Dur");
+    if(S.sc!=="dur")add(MN,"-Moll");
+  }else{
+    if(S.tr==="all"||S.tr==="dur")add(DN,"-Dur");
+    if(S.tr==="all"||S.tr==="moll")add(MN,"-Moll");
+    if(S.tr==="all"||S.tr==="dim")add(DN,"-vermindert");
+    if(S.tr==="all"||S.tr==="aug")add(DN,"-übermäßig");
+  }
+  return p;
+}
+function draw(){
+  var r,sig,tries=0,scales=S.mode==="scales";
+  do{
+    r={k:pick(keyPool()),a:scales?pick(ART):null,iv:scales?IV[S.iv==="all"?pick(["sek","terz","quart"]):S.iv]:""};
+    sig=r.k+(r.a?artName(r.a):"")+r.iv;tries++;
+  }while(sig===last&&tries<10);
+  last=sig;
+  return r;
+}
+function show(r){
+  var k=$("key");
+  k.textContent=r.k;
+  k.classList.toggle("long",r.k.length>8);
+  $("sub").textContent=r.iv||"";
+  $("notes").innerHTML=r.a?notation(r.a):"";
+}
+function clearResult(){
+  $("key").textContent="–";$("key").classList.remove("long");
+  $("sub").textContent="";$("notes").innerHTML="";last="";
+}
+function applyMode(){
+  var sc=S.mode==="scales";
+  $("cardArt").hidden=!sc;
+  $("segIv").hidden=!sc;
+  $("helpBtn").hidden=sc;
+  $("help").hidden=true;
+  $("helpBtn").setAttribute("aria-expanded","false");
+  $("keyLabel").textContent=sc?"Tonart":"Dreiklang";
+  seg("segKey",sc?"sc":"tr");
+  clearResult();
+}
+function roll(){
+  if(busy)return;
+  busy=true;
+  var main=document.querySelector("main");
+  var final=draw();
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){show(final);busy=false;return}
+  main.classList.add("shuffling");
+  var i=0;
+  var t=setInterval(function(){
+    i++;
+    if(i>=8){
+      clearInterval(t);
+      main.classList.remove("shuffling");
+      show(final);
+      busy=false;
+    }else{
+      var sc=S.mode==="scales";
+      show({k:pick(keyPool()),a:sc?pick(ART):null,iv:""});
+    }
+  },70);
+}
+$("roll").addEventListener("click",roll);
+$("helpBtn").addEventListener("click",function(){
+  var h=$("help");h.hidden=!h.hidden;
+  this.setAttribute("aria-expanded",h.hidden?"false":"true");
+});
+seg("segMode","mode",applyMode);
+seg("segIv","iv");
+applyMode();
+</script>
+</body>
+</html>
